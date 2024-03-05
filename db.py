@@ -64,9 +64,10 @@ class places:
         self.cursor.execute('''SELECT * FROM public_places WHERE district = ?''', (district, ))
         return [i[0] for i in self.cursor.fetchall()]
 
-    def get_street(self, district):
+    def get_streets(self, district):
         self.cursor.execute('''SELECT * FROM streets WHERE district = ?''', (district, ))
         return [i[0] for i in self.cursor.fetchall()]
+
 
 
 if __name__ == '__main__':

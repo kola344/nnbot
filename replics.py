@@ -2,14 +2,17 @@ from aiogram.types import InlineKeyboardMarkup, ReplyKeyboardMarkup, InlineKeybo
 import db
 import config
 import keyboards
+import os
+import branches
 
 '''USERS'''
+replic_menu = '😄 Благодаря мне ты можешь просмотреть инвентаризацию многих заведений!\n🤔 Начнем?'
 
 def replic_welcome():
     keyboard = []
     for district in config.districts:
         keyboard.append([KeyboardButton(text=district)])
-    markup = ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
+    markup = ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True, one_time_keyboard=True)
     text = '👋 Привет! Перед использованием бота необходимо зарегистрироваться.\nУкажи свой район'
     return text, markup
 
@@ -40,7 +43,7 @@ def replic_regedu(disctrict):
     educations = place.get_educations(disctrict)
     keyboard = []
     for education in educations:
-        keyboard.append([InlineKeyboardButton(text=education, callback_data=f'e.s.{education}')])
+        keyboard.append([InlineKeyboardButton(text=education, callback_data=f'e.e.{education}')])
     keyboard.append([InlineKeyboardButton(text='⬅️ Назад', callback_data=f'menu..')])
     markup = InlineKeyboardMarkup(inline_keyboard=keyboard)
     text = f'📋 Список учебных учреждений района {disctrict}'
@@ -51,7 +54,7 @@ def replic_regpublics(disctrict):
     publics = place.get_public_places(disctrict)
     keyboard = []
     for public in publics:
-        keyboard.append([InlineKeyboardButton(text=public, callback_data=f'p.s.{public}')])
+        keyboard.append([InlineKeyboardButton(text=public, callback_data=f'e.p.{public}')])
     keyboard.append([InlineKeyboardButton(text='⬅️ Назад', callback_data=f'menu..')])
     markup = InlineKeyboardMarkup(inline_keyboard=keyboard)
     text = f'📋 Список общественных мест района {disctrict}'
@@ -59,10 +62,10 @@ def replic_regpublics(disctrict):
 
 def replic_regstreets(disctrict):
     place = db.places()
-    streets = place.get_street(disctrict)
+    streets = place.get_streets(disctrict)
     keyboard = []
     for street in streets:
-        keyboard.append([InlineKeyboardButton(text=street, callback_data=f's.s.{street}')])
+        keyboard.append([InlineKeyboardButton(text=street, callback_data=f'e.s.{street}')])
     keyboard.append([InlineKeyboardButton(text='⬅️ Назад', callback_data=f'menu..')])
     markup = InlineKeyboardMarkup(inline_keyboard=keyboard)
     text = f'📋 Список улиц района {disctrict}'
@@ -77,13 +80,105 @@ def replic_profile(user_id):
     text = f'👤 Профиль\n{first_name}\n{last_name} (@{username})\nРайон: {district}\nУчебное учреждение: {education}\nОбщественное место: {public_place}\nУлица: {street}'
     return text, keyboards.keyboard_menubutton
 
+def replic_search():
+    tries = branches.get_tries()
+    keyboard = []
+    for i in tries:
+        keyboard.append([InlineKeyboardButton(text=i, callback_data=f'u.t.{i}')])
+    markup = InlineKeyboardMarkup(inline_keyboard=keyboard)
+    text = '😄 Выбери место'
+    return text, markup
+
+def replic_informator(tree, branch):
+    items = branches.Tree(tree).informator(branch)
+    keyboard = []
+    for item in items:
+        keyboard.append([InlineKeyboardButton(text=item, callback_data=f'u.i.{item}')])
+    if branch == []:
+        text = tree
+    else:
+        keyboard.append([InlineKeyboardButton(text='⬅️ Назад', callback_data=f'u.back.')])
+        text = branch[-1]
+    markup = InlineKeyboardMarkup(inline_keyboard=keyboard)
+    return text, markup
+
 
 '''ADMIN'''
-def admin_menu():
-    bases = db.get_bases()
-    keyboard = []
-    for base in bases:
-        keyboard.append([InlineKeyboardButton(text=base, callback_data=f'info.{base}.main')])
+replic_notrights = '😕 Недостаточно прав'
+replic_admindisctrict= 'Редактирование района'
+replic_admin_addplace = 'Введи название места'
+replic_admin_addtree = 'Введи название дерева'
+replic_admin_addbranch = 'Введи название ветки'
 
-def informator(base, branch):
-    pass
+def replic_admin_districts():
+    keyboard = []
+    for district in config.districts:
+        keyboard.append([InlineKeyboardButton(text=district, callback_data=f'e..{district}')])
+    markup = InlineKeyboardMarkup(inline_keyboard=keyboard)
+    text = 'Выбери район для редактирования'
+    return text, markup
+
+def replic_admin_educations(disctrict):
+    database = db.places()
+    educations = database.get_educations(disctrict)
+    keyboard = []
+    for education in educations:
+        keyboard.append([InlineKeyboardButton(text=education, callback_data=f'del.edu.{education}')])
+    keyboard.append([InlineKeyboardButton(text='➕ Добавить', callback_data=f'add.edu.{disctrict}')])
+    keyboard.append([InlineKeyboardButton(text='⬅️ Назад', callback_data=f'e..{disctrict}')])
+    markup = InlineKeyboardMarkup(inline_keyboard=keyboard)
+    text = f'Образовательные учреждения района {disctrict}. Для удаления места нажми на него'
+    return text, markup
+
+def replic_admin_publicplaces(district):
+    database = db.places()
+    places = database.get_public_places(district)
+    keyboard = []
+    for place in places:
+        keyboard.append([InlineKeyboardButton(text=place, callback_data=f'del.pub.{place}')])
+    keyboard.append([InlineKeyboardButton(text='➕ Добавить', callback_data=f'add.public.{district}')])
+    keyboard.append([InlineKeyboardButton(text='⬅️ Назад', callback_data=f'e..{district}')])
+    markup = InlineKeyboardMarkup(inline_keyboard=keyboard)
+    text = f'Общественные места района {district}. Для удаления места нажми на него'
+    return text, markup
+
+def replic_admin_streets(district):
+    database = db.places()
+    streets = database.get_streets(district)
+    keyboard = []
+    for street in streets:
+        keyboard.append([InlineKeyboardButton(text=street, callback_data=f'del.str.{street}')])
+    keyboard.append([InlineKeyboardButton(text='➕ Добавить', callback_data=f'add.street.{district}')])
+    keyboard.append([InlineKeyboardButton(text='⬅️ Назад', callback_data=f'e..{district}')])
+    markup = InlineKeyboardMarkup(inline_keyboard=keyboard)
+    text = f'Улицы района {district}. Для удаления места нажми на него'
+    return text, markup
+
+def replic_inventory_editor_menu():
+    items = branches.get_tries()
+    keyboard = []
+    for item in items:
+        keyboard.append([InlineKeyboardButton(text=item, callback_data=f'tree.e.{item}')])
+    keyboard.append([InlineKeyboardButton(text='➕ Создать', callback_data=f'tree.add.')])
+    markup = InlineKeyboardMarkup(inline_keyboard=keyboard)
+    text = 'Деревья'
+    return text, markup
+
+def replic_branch_informator(tree, branch):
+    items = branches.Tree(tree).informator(branch)
+    keyboard = []
+    for item in items:
+        keyboard.append([InlineKeyboardButton(text=item, callback_data=f'b.e.{item}')])
+    keyboard.append([InlineKeyboardButton(text='➕ Добавить', callback_data=f'b.add.')])
+    if branch == []:
+        keyboard.append([InlineKeyboardButton(text='❌ Удалить дерево', callback_data=f'tree.del.{tree}')])
+        text = tree
+    else:
+        keyboard.append([InlineKeyboardButton(text='⬅️ Назад', callback_data=f'b.back.')])
+        text = branch[-1]
+    markup = InlineKeyboardMarkup(inline_keyboard=keyboard)
+    return text, markup
+
+
+
+
